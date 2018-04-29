@@ -41,7 +41,7 @@ bool auto_option_enabled = true;
 char choice = '?';
 char ch;
 
-const auto sql_ip = ""; // enter your IP here, example: tcp://dumanstudios.com:3306
+const auto sql_ip = ""; // enter your IP here, example: tcp://yourwebsite.com:3306
 const auto sql_username = ""; // enter your SQL username here, example: root
 const auto sql_password = ""; // enter your SQL password here, example: 123456
 
@@ -230,7 +230,7 @@ int main()
 		password = sinput('*', true);
 		//between here
 		string sha256_password;
-		DUMANSHA256::hash256_hex_string(password, sha256_password);
+		dumansha256::hash256_hex_string(password, sha256_password);
 		execution_command = "SELECT password FROM members WHERE username='"
 			+ username + "'";
 		pstmt = con->prepareStatement(execution_command.c_str());
@@ -380,7 +380,7 @@ int main()
 		cin >> password;
 		cin.ignore();
 		string sha256_password;
-		DUMANSHA256::hash256_hex_string(password, sha256_password);
+		dumansha256::hash256_hex_string(password, sha256_password);
 		execution_command = "INSERT INTO `members`(`username`, `email`, `password`) VALUES ('"
 						 + username + "','" + mail + "','" + sha256_password + "')";
 		stmt->execute(execution_command.c_str());
@@ -564,7 +564,7 @@ int main()
 			case '3':
 				cout << "\nEnter your new password: ";
 				password = sinput('*', false);
-				DUMANSHA256::hash256_hex_string(password, sha256_password);
+				dumansha256::hash256_hex_string(password, sha256_password);
 				driver = get_driver_instance();
 				con = driver->connect(sql_ip, sql_username, sql_password);
 
@@ -829,10 +829,10 @@ private:
 	std::string m_error_msg_;
 };
 
-string smtp_url = "smtp.sendgrid.net"; // your smtp address, could be different
-const unsigned smtp_port = 587; // smtp port, could be 25, 465, 587 etc.
-string smtp_username = ""; // smtp username
-string smtp_password = ""; // smtp password
+string smtp_url = "smtp.sendgrid.net";
+const unsigned smtp_port = 587;
+string smtp_username = "";
+string smtp_password = "";
 
 void forgot_password()
 {
@@ -840,7 +840,6 @@ void forgot_password()
 
 	/* MAIL STUFF BELOW */
 	smtp_client mailc(smtp_url, smtp_port, smtp_username, smtp_password);
-	// don't forget to modify the sender mail and your message
 	mailc.send("noreply@dumanstudios.com",user_mail,"Password Recovery","Hey, " + user_name +
 		"!\n\nSomeone (hopefully you!) has submitted a forgotten password request for your account on DumanSTUDIOS projectX\n\n"
 		+ "Here's the token to update your password:\n" + new_token + "\n\n If you didn't do this request just ignore or contact us at https://support.dumanstudios.com \n\n");
@@ -867,7 +866,7 @@ void forgot_password()
 		if(new_password == repeat_pass)
 		{
 			string sha256_password;
-			DUMANSHA256::hash256_hex_string(new_password, sha256_password);
+			dumansha256::hash256_hex_string(new_password, sha256_password);
 			execution_command = "UPDATE `members` SET `password`='" + sha256_password + "' WHERE `username`='" + user_name + "';";
 			stmt->execute(execution_command.c_str());
 		}
