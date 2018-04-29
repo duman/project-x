@@ -829,10 +829,10 @@ private:
 	std::string m_error_msg_;
 };
 
-string smtp_url = "smtp.sendgrid.net";
-const unsigned smtp_port = 587;
-string smtp_username = "";
-string smtp_password = "";
+string smtp_url = "smtp.sendgrid.net"; // your smtp address, could be different
+const unsigned smtp_port = 587; // smtp port, could be 25, 465, 587 etc.
+string smtp_username = ""; // smtp username
+string smtp_password = ""; // smtp password
 
 void forgot_password()
 {
@@ -840,6 +840,7 @@ void forgot_password()
 
 	/* MAIL STUFF BELOW */
 	smtp_client mailc(smtp_url, smtp_port, smtp_username, smtp_password);
+	// don't forget to modify the sender mail and your message
 	mailc.send("noreply@dumanstudios.com",user_mail,"Password Recovery","Hey, " + user_name +
 		"!\n\nSomeone (hopefully you!) has submitted a forgotten password request for your account on DumanSTUDIOS projectX\n\n"
 		+ "Here's the token to update your password:\n" + new_token + "\n\n If you didn't do this request just ignore or contact us at https://support.dumanstudios.com \n\n");
