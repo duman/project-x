@@ -29,6 +29,7 @@ player p1(100, 100, "NULL");
 string username, password, mail, time_setting, onlinestatus;
 string user_mail, user_name;
 string sha256_password;
+string settingsini[9];
 int auto_save_time_interval_seconds = 20;
 __int64 total = 0;
 int total_kills = 0;
@@ -41,9 +42,9 @@ bool auto_option_enabled = true;
 char choice = '?';
 char ch;
 
-const auto sql_ip = ""; // enter your IP here, example: tcp://yourwebsite.com:3306
-const auto sql_username = ""; // enter your SQL username here, example: root
-const auto sql_password = ""; // enter your SQL password here, example: 123456
+const auto sql_ip = static_cast<sql::SQLString>(init_settings("settings.ini", 0, 'D').c_str());
+const auto sql_username = static_cast<sql::SQLString>(init_settings("settings.ini", 1, 'D').c_str());
+const auto sql_password = static_cast<sql::SQLString>(init_settings("settings.ini", 2, 'D').c_str());
 
 string monster_name_array[50] = {
 "Ivana Lessley",
@@ -829,10 +830,10 @@ private:
 	std::string m_error_msg_;
 };
 
-string smtp_url = "smtp.sendgrid.net";
-const unsigned smtp_port = 587;
-string smtp_username = "";
-string smtp_password = "";
+string smtp_url = init_settings("settings.ini", 3, 'D').c_str();
+const unsigned smtp_port = stoi(init_settings("settings.ini", 4, 'D').c_str());
+string smtp_username = init_settings("settings.ini", 5, 'D').c_str();
+string smtp_password = init_settings("settings.ini", 6, 'D').c_str();
 
 void forgot_password()
 {
