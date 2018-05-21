@@ -23,81 +23,32 @@
 #include <duman.h>
 using boost::asio::ip::tcp;
 using namespace boost::archive::iterators;
-typedef base64_from_binary<transform_width<const char *,6,8> > base64_text;
+typedef base64_from_binary<transform_width<const char *, 6, 8> > base64_text;
 
-player p1(100, 100, "NULL");
+vector<string> monster_name_array;
+player p1(100, 100, "NULL", 0);
 string username, password, mail, time_setting, onlinestatus;
 string user_mail, user_name;
 string sha256_password;
-string settingsini[9];
+string settings_file = "settings.ini";
 int auto_save_time_interval_seconds = 20;
 __int64 total = 0;
 int total_kills = 0;
 int total_max_hp = 0;
+int boost_count = 0;
 bool auto_save_enabled = false; // in settings give ability to set time. don't allow below 15 seconds. self note. do it.
 bool first_save = true;
 int times_you_died = 0;
+int gold = 0;
 bool auto_option = false;
 bool auto_option_enabled = true;
 char choice = '?';
 char ch;
+unsigned int killstreak = 0;
 
-const auto sql_ip = static_cast<sql::SQLString>(init_settings("settings.ini", 0, 'D').c_str());
-const auto sql_username = static_cast<sql::SQLString>(init_settings("settings.ini", 1, 'D').c_str());
-const auto sql_password = static_cast<sql::SQLString>(init_settings("settings.ini", 2, 'D').c_str());
-
-string monster_name_array[50] = {
-"Ivana Lessley",
-"Federico Meese",
-"Delana Hayner",
-"Noella Schultheis",
-"Raeann Winner",
-"Santana Darley",
-"Lashay Poorman",
-"Ryan Womble",
-"Tonya Maddocks",
-"Jake Moffet",
-"Somer Brazeau",
-"Aretha Mullinax",
-"Dwayne Avant",
-"Olevia Birt",
-"Elisabeth Gioia",
-"Ivette Jimenes",
-"Lacy Fraga",
-"Vaughn Collingsworth",
-"Rochelle Philhower",
-"Dennise Fishel",
-"Lesa Boer",
-"Esteban Worrall",
-"Sherman Teller",
-"Stacee Banning",
-"Katharyn Descoteaux",
-"Elroy Litwin",
-"Maura Kollar",
-"Virgil Gettys",
-"Laurence Frisbee",
-"Rosanne Ney",
-"Fred Rego",
-"Shenita Watchman",
-"Sandie Narcisse",
-"Kali Fassett",
-"Christen Points",
-"Kari Lehrman",
-"Evie Dancer",
-"Zelma Bader",
-"Codi Gingras",
-"Kayleigh Gains",
-"Rosette Renken",
-"Deb Elston",
-"Gretchen Corchado",
-"Emmaline Waldeck",
-"Vennie Perrigo",
-"Kristy Goosby",
-"Charleen Padilla",
-"Anastasia Profitt",
-"Bob Carls",
-"Alona Basye"
-};
+auto sql_ip = static_cast<sql::SQLString>(init_settings(settings_file, 0, 'D').c_str());
+auto sql_username = static_cast<sql::SQLString>(init_settings(settings_file, 1, 'D').c_str());
+auto sql_password = static_cast<sql::SQLString>(init_settings(settings_file, 2, 'D').c_str());
 
 void online_save();
 void forgot_password();
@@ -108,20 +59,21 @@ int main()
 {
 	const auto hwnd = GetConsoleWindow();
 	const auto hmenu = GetSystemMenu(hwnd, FALSE);
-    EnableMenuItem(hmenu, SC_CLOSE, MF_GRAYED);
+	EnableMenuItem(hmenu, SC_CLOSE, MF_GRAYED);
 
-    /*
-    This one checks if the internet connection is there or not to a particular URL.
+	/*
+	This one checks if the internet connection is there or not to a particular URL.
 	If it fails to connect, you can do/say anything inside the fucntion.
 	I recommend any_to_exit(true); from duman.h file.
 
 	Don't forget to set your own IP address on the first parameter.
 	*/
-	if(!InternetCheckConnection("https://dumanstudios.com", FLAG_ICC_FORCE_CONNECTION, 0))
+	if (!InternetCheckConnection("https://dumanstudios.com", FLAG_ICC_FORCE_CONNECTION, 0))
 	{
 		cout << "Connection to DumanSTUDIOS.com is failed.\nPlease check your internet connection.\n\n";
+		any_to_exit();
 	}
-	
+
 	// MYSQL STUFF BELOW (If you have a running MySQL server and a working IP with open ports, you don't have to change anything.)
 	sql::Driver *driver;
 	sql::Connection *con;
@@ -133,265 +85,277 @@ int main()
 	string char_selection;
 	string execution_command;
 	string selection3;
-	
-	try {
-	driver = get_driver_instance();
-	con = driver->connect(sql_ip, sql_username, sql_password);
 
-	con->setSchema("duman");
-	stmt = con->createStatement();
-	stmt->execute("CREATE TABLE IF NOT EXISTS `duman`.`members`(`id` int(11) NOT NULL AUTO_INCREMENT,`username` varchar(30) NOT NULL, `charName` varchar(50) NOT NULL, `hp` varchar(50) NOT NULL,`email` varchar(50) NOT NULL,`password` varchar(128) NOT NULL, `exp` varchar(50) NOT NULL, `level` varchar(50) NOT NULL, `boosts` varchar(50) NOT NULL, `autoHPItem` varchar(50) NOT NULL, `autoSaveTime` varchar(50) NOT NULL, `playTime` varchar(50) NOT NULL, `monstersKilled` varchar(50) NOT NULL, `autoSaveEnabled` varchar(50) NOT NULL, `maxHP` varchar(50) NOT NULL, `youDied` varchar(50) NOT NULL, `passwordToken` varchar(50) NOT NULL, `multiToken` varchar(50) NOT NULL, `onlineStatus` varchar(2) NOT NULL, `autoEnabled` varchar(50) NOT NULL, PRIMARY KEY(`id`), UNIQUE KEY `username` (`username`)) ENGINE = MYISAM DEFAULT CHARSET = utf8; ");
-	
+	try {
+		driver = get_driver_instance();
+		con = driver->connect(sql_ip, sql_username, sql_password);
+
+		con->setSchema("duman");
+		stmt = con->createStatement();
+		stmt->execute("CREATE TABLE IF NOT EXISTS `duman`.`members`(`id` int(11) NOT NULL AUTO_INCREMENT,`username` varchar(30) NOT NULL, `charName` varchar(50) NOT NULL, `hp` varchar(50) NOT NULL,`email` varchar(50) NOT NULL,`password` varchar(128) NOT NULL, `exp` varchar(50) NOT NULL, `level` varchar(50) NOT NULL, `boosts` varchar(50) NOT NULL, `autoHPItem` varchar(50) NOT NULL, `autoSaveTime` varchar(50) NOT NULL, `playTime` varchar(50) NOT NULL, `monstersKilled` varchar(50) NOT NULL, `autoSaveEnabled` varchar(50) NOT NULL, `maxHP` varchar(50) NOT NULL, `youDied` varchar(50) NOT NULL, `passwordToken` varchar(50) NOT NULL, `multiToken` varchar(50) NOT NULL, `onlineStatus` varchar(2) NOT NULL, `autoEnabled` varchar(50) NOT NULL, `gold` INT NOT NULL, PRIMARY KEY(`id`), UNIQUE KEY `username` (`username`)) ENGINE = MYISAM DEFAULT CHARSET = utf8; ");
+
 	selection5:
-	cout << "/* * * * * * * * * * * * * *\\\n";
-	cout << "| y: Yes, I am!             |\n";
-	cout << "| n: No, I want to register!|\n";
-	cout << "| f: forgotten password!    |\n";
-	cout << "\\* * * * * * * * * * * * * */\n\n";
-	cout << "Are you a registered user? (y/n/f): ";
-	cin >> selection3;
-	cin.ignore();
-	if (selection3 != "y" && selection3 != "n" && selection3 != "f")
-	{
-		cout << "Invalid selection!\n";
-		cout << "Do you want to try again? (y/n): ";
-		cin >> selection2;
-		if (selection2 == 'y')
-		{
-			clear();
-			refresh();
-			cout << "\n";
-			char_selection.clear();
-			goto selection5;
-		}
-		any_to_exit(1,true);
-	}
-	if(selection3 == "f")
-	{
-		cout << "Username    : ";
-		cin >> user_name;
-		execution_command = "SELECT username FROM members WHERE username='" + user_name + "'";
-		pstmt = con->prepareStatement(execution_command.c_str());
-		result = pstmt->executeQuery();
-		if (result->next() == 0)
-		{
-			cout << "\nUser " << user_name << " doesn't exists in the database.\n";
-			any_to_exit(300, true);
-		}
-		cout << "Mail address: ";
-		cin >> user_mail;
-		execution_command = "SELECT email FROM members WHERE username='"
-			+ user_name + "'";
-		pstmt = con->prepareStatement(execution_command.c_str());
-		result = pstmt->executeQuery();
-		while (result->next()) {
-			const string databasepulledmail = result->getString("email").c_str();
-			cout << "\n";
-			if (databasepulledmail != user_mail)
-			{
-				cout << "You have entered incorrect email for user " + user_name + "!\n";
-				any_to_exit(300, true);
-			}
-		}
-		forgot_password();
-		any_to_exit(300, true);
-	}
-	if (selection3 == "y")
-	{
-		//login here and load stuff from previous instance
-		selection2:
-		cout << "Username: ";
-		cin >> username;
+		cout << "/* * * * * * * * * * * * * *\\\n";
+		cout << "| y: Yes, I am!             |\n";
+		cout << "| n: No, I want to register!|\n";
+		cout << "| f: forgotten password!    |\n";
+		cout << "\\* * * * * * * * * * * * * */\n\n";
+		cout << "Are you a registered user? (y/n/f): ";
+		cin >> selection3;
 		cin.ignore();
-		// checking if username exists or not as the first step
-		execution_command = "SELECT username FROM members WHERE username='" + username + "'";
-		pstmt = con->prepareStatement(execution_command.c_str());
-		result = pstmt->executeQuery();
-		if (result->next() == 0)
+		if (selection3 != "y" && selection3 != "n" && selection3 != "f")
 		{
-			cout << "\nUser " << username << " doesn't exists in the database.\n";
+			cout << "Invalid selection!\n";
 			cout << "Do you want to try again? (y/n): ";
-			cin >> selection;
-			cin.ignore();
-			if (selection == 'y')
+			cin >> selection2;
+			if (selection2 == 'y')
 			{
 				clear();
 				refresh();
 				cout << "\n";
-				goto selection2;
+				char_selection.clear();
+				goto selection5;
 			}
-			cout << "To quit, press any key...\n";
-			_getch();
-			exit(1);
+			any_to_exit(1, true);
 		}
-		// end of check
-		selection3:
-		cout << "Password: ";
-		//new password masking trial
-		password = sinput('*', true);
-		//between here
-		string sha256_password;
-		dumansha256::hash256_hex_string(password, sha256_password);
-		execution_command = "SELECT password FROM members WHERE username='"
-			+ username + "'";
-		pstmt = con->prepareStatement(execution_command.c_str());
-		result = pstmt->executeQuery();
-		while (result->next()) {
-			const string databasepulledpw = result->getString("password").c_str();
-			cout << "\n";
-			if (databasepulledpw != sha256_password)
+		if (selection3 == "f")
+		{
+			cout << "Username    : ";
+			cin >> user_name;
+			execution_command = "SELECT username FROM members WHERE username='" + user_name + "'";
+			pstmt = con->prepareStatement(execution_command.c_str());
+			result = pstmt->executeQuery();
+			if (result->next() == 0)
 			{
-				cout << "You have entered incorrect password for user " + username + "!\n";
+				cout << "\nUser " << user_name << " doesn't exists in the database.\n";
+				any_to_exit(300, true);
+			}
+			cout << "Mail address: ";
+			cin >> user_mail;
+			execution_command = "SELECT email FROM members WHERE username='"
+				+ user_name + "'";
+			pstmt = con->prepareStatement(execution_command.c_str());
+			result = pstmt->executeQuery();
+			while (result->next()) {
+				const string databasepulledmail = result->getString("email").c_str();
+				cout << "\n";
+				if (databasepulledmail != user_mail)
+				{
+					cout << "You have entered incorrect email for user " + user_name + "!\n";
+					any_to_exit(300, true);
+				}
+			}
+			forgot_password();
+			any_to_exit(300, true);
+		}
+		if (selection3 == "y")
+		{
+			//login here and load stuff from previous instance
+		selection2:
+			cout << "Username: ";
+			cin >> username;
+			cin.ignore();
+			// checking if username exists or not as the first step
+			execution_command = "SELECT username FROM members WHERE username='" + username + "'";
+			pstmt = con->prepareStatement(execution_command.c_str());
+			result = pstmt->executeQuery();
+			if (result->next() == 0)
+			{
+				cout << "\nUser " << username << " doesn't exists in the database.\n";
 				cout << "Do you want to try again? (y/n): ";
 				cin >> selection;
+				cin.ignore();
 				if (selection == 'y')
 				{
 					clear();
 					refresh();
 					cout << "\n";
-					password.clear();
-					goto selection3;
+					goto selection2;
 				}
 				cout << "To quit, press any key...\n";
 				_getch();
 				exit(1);
-			} // add an else if to check if username exists
-			// LOAD ALL DATA TO THE ITEMS HERE
-			// SINCE MYSQL IS IN STRING FORM CONVERT IT TO INT BACK
-			// STORING IS NO PROBLEM I GOT IT ALREADY
-			execution_command = "SELECT charName FROM members WHERE username='" + username + "'";
+			}
+			// end of check
+		selection3:
+			cout << "Password: ";
+			//new password masking trial
+			password = sinput('*', true);
+			//between here
+			string sha256_password;
+			dumansha256::hash256_hex_string(password, sha256_password);
+			execution_command = "SELECT password FROM members WHERE username='"
+				+ username + "'";
 			pstmt = con->prepareStatement(execution_command.c_str());
 			result = pstmt->executeQuery();
 			while (result->next()) {
-				p1.set_char_name(result->getString("charName").c_str());
-			} // charName
-			execution_command = "SELECT email FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				user_mail = result->getString("email").c_str();
-			} // user mail
+				const string databasepulledpw = result->getString("password").c_str();
+				cout << "\n";
+				if (databasepulledpw != sha256_password)
+				{
+					cout << "You have entered incorrect password for user " + username + "!\n";
+					cout << "Do you want to try again? (y/n): ";
+					cin >> selection;
+					if (selection == 'y')
+					{
+						clear();
+						refresh();
+						cout << "\n";
+						password.clear();
+						goto selection3;
+					}
+					cout << "To quit, press any key...\n";
+					_getch();
+					exit(1);
+				} // add an else if to check if username exists
+				// LOAD ALL DATA TO THE ITEMS HERE
+				// SINCE MYSQL IS IN STRING FORM CONVERT IT TO INT BACK
+				// STORING IS NO PROBLEM I GOT IT ALREADY
+				execution_command = "SELECT charName FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					p1.set_char_name(result->getString("charName").c_str());
+				} // charName
+				execution_command = "SELECT email FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					user_mail = result->getString("email").c_str();
+				} // user mail
+				execution_command = "SELECT username FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					user_name = result->getString("username").c_str();
+				} // username
+				execution_command = "SELECT exp FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					p1.set_exp(result->getString("exp").c_str());
+				} // exp
+				execution_command = "SELECT boosts FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					p1.set_boosts(result->getString("boosts").c_str());
+				} // boosts
+				execution_command = "SELECT hp FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					p1.set_hp(result->getString("hp").c_str());
+					if (p1.return_hp() <= 0)
+					{
+						p1.set_hp("1");
+						break;
+					}
+				} // hp
+				execution_command = "SELECT autoSaveEnabled FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					auto_save_enabled = stoi(result->getString("autoSaveEnabled").c_str());
+				} // autoSaveEnabled
+				execution_command = "SELECT autoSaveTime FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					auto_save_time_interval_seconds = stoi(result->getString("autoSaveTime").c_str());
+				} // autoSaveTimeInterval
+				execution_command = "SELECT playTime FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					total = stoi(result->getString("playTime").c_str());
+				} // playTime
+				execution_command = "SELECT monstersKilled FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					total_kills = stoi(result->getString("monstersKilled").c_str());
+				} // monstersKilled
+				execution_command = "SELECT maxHP FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					p1.set_max_hp(result->getString("maxHP").c_str());
+				} // maxHP
+				execution_command = "SELECT youDied FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					times_you_died = stoi(result->getString("youDied").c_str());
+				} // you died
+				execution_command = "SELECT autoHPItem FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					p1.set_autohpitem(result->getString("autoHPItem").c_str());
+				} // autoHPItem
+				execution_command = "SELECT autoEnabled FROM members WHERE username='" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					p1.set_auto_enabled(stoi(result->getString("autoEnabled").c_str()));
+				} // autoEnabled
+				execution_command = "SELECT onlineStatus FROM members WHERE username = '" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					onlinestatus = result->getString("onlineStatus").c_str();
+				} // onlineStatus
+				execution_command = "SELECT gold FROM members WHERE username = '" + username + "'";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					gold = result->getInt("gold");
+				} p1.set_gold(gold); // gold amount
+				execution_command = "SELECT monster_name FROM monsters_test";
+				pstmt = con->prepareStatement(execution_command.c_str());
+				result = pstmt->executeQuery();
+				while (result->next()) {
+					monster_name_array.emplace_back(result->getString("monster_name").c_str());
+				} // loadmonsternames
+				delete stmt;
+				delete con;
+				delete pstmt;
+			}
+		}
+		if (selection3 == "n")
+		{
+		selection6:
+			cout << "Enter your username: ";
+			cin >> username;
+			cin.ignore();
+			// check if user exists to prevent highjacking
 			execution_command = "SELECT username FROM members WHERE username='" + username + "'";
 			pstmt = con->prepareStatement(execution_command.c_str());
 			result = pstmt->executeQuery();
-			while (result->next()) {
-				user_name = result->getString("username").c_str();
-			} // username
-			execution_command = "SELECT exp FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				p1.set_exp(result->getString("exp").c_str());
-			} // exp
-			execution_command = "SELECT boosts FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				p1.set_boosts(result->getString("boosts").c_str());
-			} // boosts
-			execution_command = "SELECT hp FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				p1.set_hp(result->getString("hp").c_str());
-				if (p1.return_hp() <= 0)
-				{
-					p1.set_hp("1");
-					break;
-				}
-			} // hp
-			execution_command = "SELECT autoSaveEnabled FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				auto_save_enabled = stoi(result->getString("autoSaveEnabled").c_str());
-			} // autoSaveEnabled
-			execution_command = "SELECT autoSaveTime FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				auto_save_time_interval_seconds = stoi(result->getString("autoSaveTime").c_str());
-			} // autoSaveTimeInterval
-			execution_command = "SELECT playTime FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				total = stoi(result->getString("playTime").c_str());
-			} // playTime
-			execution_command = "SELECT monstersKilled FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				total_kills = stoi(result->getString("monstersKilled").c_str());
-			} // monstersKilled
-			execution_command = "SELECT maxHP FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				p1.set_max_hp(result->getString("maxHP").c_str());
-			} // maxHP
-			execution_command = "SELECT youDied FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				times_you_died = stoi(result->getString("youDied").c_str());
-			} // you died
-			execution_command = "SELECT autoHPItem FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				p1.set_autohpitem(result->getString("autoHPItem").c_str());
-			} // autoHPItem
-			execution_command = "SELECT autoEnabled FROM members WHERE username='" + username + "'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				p1.set_auto_enabled(stoi(result->getString("autoEnabled").c_str()));
-			} // autoEnabled
-			execution_command = "SELECT onlineStatus FROM `members` WHERE `username` = '"+ username +"'";
-			pstmt = con->prepareStatement(execution_command.c_str());
-			result = pstmt->executeQuery();
-			while (result->next()) {
-				onlinestatus = result->getString("onlineStatus").c_str();
-			} // onlineStatus
-			delete stmt;
-			delete con;
+			if (result->next() != 0) {
+				cout << "User " << username << " is already registered! Try another username!\n";
+				goto selection6;
+			} // check if already registered
+
+			cout << "Enter your mail address: ";
+			cin >> mail;
+			cin.ignore();
+			cout << "Enter your password: ";
+			cin >> password;
+			cin.ignore();
+			string sha256_password;
+			dumansha256::hash256_hex_string(password, sha256_password);
+			execution_command = "INSERT INTO `members`(`username`, `email`, `password`) VALUES ('"
+				+ username + "','" + mail + "','" + sha256_password + "')";
+			stmt->execute(execution_command.c_str());
 			delete pstmt;
+			delete con;
+			delete stmt;
 		}
 	}
-	if (selection3 == "n")
-	{
-		selection6:
-		cout << "Enter your username: ";
-		cin >> username;
-		cin.ignore();
-		// check if user exists to prevent highjacking
-		execution_command = "SELECT username FROM members WHERE username='" + username + "'";
-		pstmt = con->prepareStatement(execution_command.c_str());
-		result = pstmt->executeQuery();
-		if (result->next() != 0) {
-			cout << "User " << username << " is already registered! Try another username!\n";
-			goto selection6;
-		} // check if already registered
-
-		cout << "Enter your mail address: ";
-		cin >> mail;
-		cin.ignore();
-		cout << "Enter your password: ";
-		cin >> password;
-		cin.ignore();
-		string sha256_password;
-		dumansha256::hash256_hex_string(password, sha256_password);
-		execution_command = "INSERT INTO `members`(`username`, `email`, `password`) VALUES ('"
-						 + username + "','" + mail + "','" + sha256_password + "')";
-		stmt->execute(execution_command.c_str());
-		delete pstmt;
-		delete con;
-		delete stmt;
-	}
-	}
 	catch (sql::SQLException &e) {
-		if(e.getErrorCode() == 2003)
+		if (e.getErrorCode() == 2003)
 		{
 			cout << "Secure server connection to DumanSTUDIOS.com is failed!\n";
 			key_to_exit(1000, 'q', 0, true);
@@ -409,12 +373,12 @@ int main()
 	p1.set_char_name(username);
 	p1.set_monsters_killed(total_kills);
 	srand(static_cast<unsigned int>(time(nullptr)));
-	auto random_access = rand() % 49 + 1;
+	auto random_access = rand() % (monster_name_array.size() - 1) + 1;
 	auto exit = false;
 	systemclass sys;
 	monster m1(100, 230, monster_name_array[random_access]);
 	auto key = 'z';
-	// Constructs the new thread and runs it. Does not block execution.
+
 	p1.set_death_count(times_you_died);
 	if (p1.return_specitem() == 1)
 	{
@@ -427,7 +391,7 @@ int main()
 		const auto start = chrono::system_clock::now();
 		if (_kbhit())
 			key = _getch();
-		
+
 		switch (key)
 		{
 		case 27:
@@ -439,21 +403,21 @@ int main()
 			break;
 		case 'a':
 		case 'A':
-			random_access = rand() % 49 + 1;
+			random_access = rand() % (monster_name_array.size() - 1) + 1;
 			m1.seed(p1, monster_name_array[random_access]);
 		REATTK:
-			p1.initiate_attack(p1,m1);
+			p1.initiate_attack(p1, m1);
 			clear();
 			Sleep(800);
 			refresh();
-			systemclass::battle_information(p1,m1);
+			systemclass::battle_information(p1, m1);
 			if (p1.return_hp() <= 0)
 			{
 				exit = true;
 				times_you_died++;
 				online_save();
 				cout << "\nREST IN PEACE [*]\n\nWhile you were in a battle with " << m1.return_name() << ", you died.\n";
-				cout << "Press any key to close the program...\n";		
+				cout << "Press any key to close the program...\n";
 				_getch();
 				break;
 			}
@@ -474,6 +438,35 @@ int main()
 			cout << "\nCloud save complete!\n";
 			Sleep(750);
 			break;
+		case 'd':
+		case 'D':
+			cout << "Welcome to the Market!\n\n";
+			cout << "Items for sale:\n";
+			cout << "1. Boost x1 [50 gold]\n";
+			cout << "Description: Gives you extra 50 HP, this way your HP\ncan exceed max HP, note if you heal while boosted, you lose extra HP!\n";
+			choice = _getch();
+			switch(choice)
+			{
+			case '1':
+				if(p1.return_gold() < 50)
+				{
+					cout << "\nInsufficient gold!\n";
+					Sleep(1500);
+				}	
+				else
+				{
+					p1.market_gold(50);
+					cout << "\nBought x1 boost!\n";
+					boost_count = p1.return_boosts() + 1;
+					p1.set_boosts(to_string(boost_count));
+					Sleep(200);
+				}
+				break;
+			default:
+				break;
+			}
+
+			break;
 		case 'o':
 		case 'O':
 			cout << "OPTIONS:\n";
@@ -484,9 +477,9 @@ int main()
 			cout << "3. Change your password\n";
 			cout << "4. Set online status";
 			cout << " (";
-			if(onlinestatus == "1")
+			if (onlinestatus == "1")
 				cout << "online)\n";
-			if(onlinestatus == "0")
+			if (onlinestatus == "0")
 				cout << "offline)\n";
 			if (auto_option)
 			{
@@ -533,11 +526,11 @@ int main()
 					break;
 				}
 			case '2':
-				selection4:
+			selection4:
 				cout << "Per XX seconds sync with the servers: ";
 				time_setting = sinput('*', false);
 				auto_save_time_interval_seconds = stoi(time_setting);
-				
+
 				if (auto_save_time_interval_seconds < 15)
 				{
 					cout << "\n\nTime interval cannot be smaller than 15 seconds!\n";
@@ -586,10 +579,10 @@ int main()
 
 				con->setSchema("duman");
 				stmt = con->createStatement();
-				execution_command = "SELECT onlineStatus FROM `members` WHERE `username` = '"+ username +"'";
+				execution_command = "SELECT onlineStatus FROM `members` WHERE `username` = '" + username + "'";
 				pstmt = con->prepareStatement(execution_command.c_str());
 				result = pstmt->executeQuery();
-				while(result->next())
+				while (result->next())
 				{
 					onlinestatus = result->getString("onlineStatus").c_str();
 				}
@@ -598,7 +591,7 @@ int main()
 				{
 					cout << "You're now online!\n";
 					Sleep(1500);
-					onlinestatus="1";
+					onlinestatus = "1";
 				}
 
 				if (onlinestatus == "0")
@@ -613,35 +606,35 @@ int main()
 					Sleep(1500);
 					onlinestatus = "0";
 				}
-				
+
 				execution_command = "UPDATE `members` SET `onlineStatus` = '" + onlinestatus + "' WHERE `username`='" += username + "'";
 				stmt->execute(execution_command.c_str());
 				break;
 			case '5':
+			{
+				if (p1.return_specitem() == 0)
 				{
-					if (p1.return_specitem() == 0)
-					{
-						cout << "\nYou don't have access to this menu yet!\n";
-						Sleep(1500);
-						break;
-					}
-					if (p1.return_auto_enabled())
-					{
-						p1.set_auto_enabled(false);
-						cout << "Auto healing item is disabled!\n";
-						online_save();
-						Sleep(1500);
-						break;
-					}
-					if (!p1.return_auto_enabled())
-					{
-						p1.set_auto_enabled(true);
-						cout << "Auto healing item is enabled!\n";
-						online_save();
-						Sleep(1500);
-						break;
-					}
+					cout << "\nYou don't have access to this menu yet!\n";
+					Sleep(1500);
+					break;
 				}
+				if (p1.return_auto_enabled())
+				{
+					p1.set_auto_enabled(false);
+					cout << "Auto healing item is disabled!\n";
+					online_save();
+					Sleep(1500);
+					break;
+				}
+				if (!p1.return_auto_enabled())
+				{
+					p1.set_auto_enabled(true);
+					cout << "Auto healing item is enabled!\n";
+					online_save();
+					Sleep(1500);
+					break;
+				}
+			}
 			case 27:
 			case 'o':
 			case 'O':
@@ -675,7 +668,7 @@ int main()
 		refresh();
 		p1.should_level_up(p1);
 		p1.information();
-		if (p1.return_specitem() == 1 && p1.return_auto_enabled())
+		if (p1.return_specitem() == 1 && p1.return_auto_enabled() && (p1.return_hp() < p1.return_max_hp()))
 		{
 			p1.heal(p1.return_h_pregen());
 		}
@@ -733,6 +726,8 @@ void online_save()
 	stmt->execute(execution_command.c_str());
 	execution_command = "UPDATE `members` SET `autoEnabled`='" + to_string(p1.return_auto_enabled()) + "' WHERE `username`='" + username + "';";
 	stmt->execute(execution_command.c_str());
+	execution_command = "UPDATE `members` SET `gold`='" + to_string(p1.return_gold()) + "' WHERE `username`='" + username + "';";
+	stmt->execute(execution_command.c_str());
 	delete stmt;
 	delete con;
 }
@@ -742,19 +737,19 @@ void online_save()
 class smtp_client
 {
 public:
-	smtp_client(std::string p_server, const unsigned int p_port,std::string p_user,std::string p_password):
-	m_server_(std::move(p_server)),m_user_name_(std::move(p_user)),m_password_(std::move(p_password)),m_port_(p_port),m_resolver_(m_io_service_),m_socket_(m_io_service_)
+	smtp_client(std::string p_server, const unsigned int p_port, std::string p_user, std::string p_password) :
+		m_server_(std::move(p_server)), m_user_name_(std::move(p_user)), m_password_(std::move(p_password)), m_port_(p_port), m_resolver_(m_io_service_), m_socket_(m_io_service_)
 	{
-		const tcp::resolver::query qry(m_server_,std::to_string(m_port_));
-		m_resolver_.async_resolve(qry,boost::bind(&smtp_client::handle_resolve,this,boost::asio::placeholders::error,
-		boost::asio::placeholders::iterator));
+		const tcp::resolver::query qry(m_server_, std::to_string(m_port_));
+		m_resolver_.async_resolve(qry, boost::bind(&smtp_client::handle_resolve, this, boost::asio::placeholders::error,
+			boost::asio::placeholders::iterator));
 	}
 	bool send(const std::string& p_from, const std::string& p_to, const std::string& p_subject, const std::string& p_message)
 	{
-		m_from_=p_from;
-		m_to_=p_to;
-		m_subject_=p_subject;
-		m_message_=p_message;
+		m_from_ = p_from;
+		m_to_ = p_to;
+		m_subject_ = p_subject;
+		m_message_ = p_message;
 		m_io_service_.run();
 		return m_has_error_;
 	}
@@ -763,28 +758,28 @@ private:
 	{
 		std::stringstream os;
 		const auto sz = p_data.size();
-		std::copy(base64_text(p_data.c_str()),base64_text(p_data.c_str()+sz),std::ostream_iterator<char>(os));
+		std::copy(base64_text(p_data.c_str()), base64_text(p_data.c_str() + sz), std::ostream_iterator<char>(os));
 		return os.str();
 	}
-	void handle_resolve(const boost::system::error_code& err,tcp::resolver::iterator endpoint_iterator)
+	void handle_resolve(const boost::system::error_code& err, tcp::resolver::iterator endpoint_iterator)
 	{
-		if(!err)
+		if (!err)
 		{
-			const tcp::endpoint endpoint=*endpoint_iterator;
+			const tcp::endpoint endpoint = *endpoint_iterator;
 			m_socket_.async_connect(endpoint,
-			boost::bind(&smtp_client::handle_connect,this,boost::asio::placeholders::error,++endpoint_iterator));
+				boost::bind(&smtp_client::handle_connect, this, boost::asio::placeholders::error, ++endpoint_iterator));
 		}
 		else
 		{
-			m_has_error_=true;
-			m_error_msg_= err.message();
+			m_has_error_ = true;
+			m_error_msg_ = err.message();
 		}
 	}
 	void write_line(const std::string& p_data)
 	{
 		std::ostream req_strm(&m_request_);
 		req_strm << p_data << "\r\n";
-		write(m_socket_,m_request_);
+		write(m_socket_, m_request_);
 		req_strm.clear();
 	}
 	void handle_connect(const boost::system::error_code& error, const tcp::resolver::iterator&)
@@ -793,24 +788,24 @@ private:
 		{
 			// The connection was successful. Send the request.
 			std::ostream req_strm(&m_request_);
-			write_line("EHLO "+m_server_);
+			write_line("EHLO " + m_server_);
 			write_line("AUTH LOGIN");
 			write_line(encode_base64(m_user_name_));
 			write_line(encode_base64(m_password_));
-			write_line("MAIL FROM:<"+m_from_+">");
-			write_line("RCPT TO:<"+m_to_+">");
+			write_line("MAIL FROM:<" + m_from_ + ">");
+			write_line("RCPT TO:<" + m_to_ + ">");
 			write_line("DATA");
-			write_line("SUBJECT:"+m_subject_);
-			write_line("From:"+m_from_);
-			write_line("To:"+m_to_);
+			write_line("SUBJECT:" + m_subject_);
+			write_line("From:" + m_from_);
+			write_line("To:" + m_to_);
 			write_line("");
 			write_line(m_message_);
 			write_line(".\r\n");
 		}
 		else
 		{
-			m_has_error_=true;
-			m_error_msg_= error.message();
+			m_has_error_ = true;
+			m_error_msg_ = error.message();
 		}
 	}
 	std::string m_server_;
@@ -830,18 +825,18 @@ private:
 	std::string m_error_msg_;
 };
 
-string smtp_url = init_settings("settings.ini", 3, 'D').c_str();
-const unsigned smtp_port = stoi(init_settings("settings.ini", 4, 'D').c_str());
-string smtp_username = init_settings("settings.ini", 5, 'D').c_str();
-string smtp_password = init_settings("settings.ini", 6, 'D').c_str();
+string smtp_url = init_settings(settings_file, 3, 'D');
+const unsigned smtp_port = stoi(init_settings(settings_file, 4, 'D'));
+string smtp_username = init_settings(settings_file, 5, 'D');
+string smtp_password = init_settings(settings_file, 6, 'D');
 
 void forgot_password()
 {
-	const auto new_token = password_generator(5,false,false);
+	const auto new_token = password_generator(5, false, false);
 
 	/* MAIL STUFF BELOW */
 	smtp_client mailc(smtp_url, smtp_port, smtp_username, smtp_password);
-	mailc.send("noreply@dumanstudios.com",user_mail,"Password Recovery","Hey, " + user_name +
+	mailc.send("noreply@dumanstudios.com", user_mail, "Password Recovery", "Hey, " + user_name +
 		"!\n\nSomeone (hopefully you!) has submitted a forgotten password request for your account on DumanSTUDIOS projectX\n\n"
 		+ "Here's the token to update your password:\n" + new_token + "\n\n If you didn't do this request just ignore or contact us at https://support.dumanstudios.com \n\n");
 	/* SQL UPDATE BELOW */
@@ -854,17 +849,17 @@ void forgot_password()
 	stmt->execute(execution_command.c_str());
 
 	cout << "An e-mail that's containing password reset token has been sent to the address " << user_mail << "!\n";
-	pass_reset:
+pass_reset:
 	cout << "Enter token to reset your password: ";
 	const auto token_input = sinput('*', false);
-	if(token_input == new_token)
+	if (token_input == new_token)
 	{
-		doubleconfirm:
+	doubleconfirm:
 		cout << "Enter your new password: ";
 		const auto new_password = sinput('*', false);
 		cout << "Enter your new password again: ";
-		const auto repeat_pass  = sinput('*', false);
-		if(new_password == repeat_pass)
+		const auto repeat_pass = sinput('*', false);
+		if (new_password == repeat_pass)
 		{
 			string sha256_password;
 			dumansha256::hash256_hex_string(new_password, sha256_password);
@@ -882,7 +877,7 @@ void forgot_password()
 	{
 		cout << "Whops, that token doesn't look like it's valid!\nWould you like to try again? (y/n): ";
 		auto selection_inp = sinput('*', false);
-		if(choice == 'y')
+		if (choice == 'y')
 		{
 			goto pass_reset;
 		}
@@ -913,15 +908,15 @@ void search_opponent()
 	execution_command = "SELECT `username` FROM `members` WHERE `onlineStatus` = '1'";
 	auto pstmt = con->prepareStatement(execution_command.c_str());
 	auto result = pstmt->executeQuery();
-	while(result->next())
+	while (result->next())
 	{
 		string db_username = result->getString("username").c_str();
-		if(db_username == username)
+		if (db_username == username)
 			continue;
 		onusers.emplace_back(db_username);
 	}
 
-	if(onusers.empty())
+	if (onusers.empty())
 	{
 		cout << "\n\nCurrently no other user is available! :(\n";
 		cout << "Please try again later.\n";
@@ -930,13 +925,13 @@ void search_opponent()
 	else
 	{
 		auto trial_amount = 0;
-		try_again:
-			// ReSharper disable once CppLocalVariableMayBeConst
+	try_again:
+		// ReSharper disable once CppLocalVariableMayBeConst
 		auto selection = rand() % onusers.size(); // this can't be const otherwise there's probability of fighting yourself
-		if(onusers[selection] == username)
+		if (onusers[selection] == username)
 		{
 			trial_amount++;
-			if(trial_amount > 10)
+			if (trial_amount > 10)
 			{
 				cout << "Currently no other user is available! :(\n";
 				goto end_of_search;
@@ -946,7 +941,7 @@ void search_opponent()
 		duman_battle(onusers[selection]);
 	}
 	cout << "\n";
-	end_of_search:
+end_of_search:
 	delete result;
 	delete pstmt;
 	delete stmt;
@@ -963,28 +958,28 @@ void duman_battle(const string& remoteuser)
 	con->setSchema("duman");
 
 	const auto stmt = con->createStatement();
-	auto execution_command = "SELECT hp, level FROM `members` WHERE `username` = '"+ remoteuser +"'";
+	auto execution_command = "SELECT hp, level FROM `members` WHERE `username` = '" + remoteuser + "'";
 	auto pstmt = con->prepareStatement(execution_command.c_str());
 	auto result = pstmt->executeQuery();
-	while(result->next())
+	while (result->next())
 	{
 		db_remoteuserhp = result->getString("hp").c_str();
 		db_remoteuserlevel = result->getString("level").c_str();
 	}
 
 	monster remote_user(stoi(db_remoteuserhp), stoi(db_remoteuserlevel), remoteuser);
-	remote_user.pvpseed(p1,remoteuser,stoi(db_remoteuserhp),stoi(db_remoteuserlevel));
-	REATTK:
-	p1.initiate_attack(p1,remote_user);
+	remote_user.pvpseed(p1, remoteuser, stoi(db_remoteuserhp), stoi(db_remoteuserlevel));
+REATTK:
+	p1.initiate_attack(p1, remote_user);
 	clear();
 	Sleep(800);
 	refresh();
-	systemclass::battle_information(p1,remote_user);
+	systemclass::battle_information(p1, remote_user);
 	if (p1.return_hp() <= 0)
 	{
 		//times_you_died++; change this to multiplayer times death
 		online_save();
-		cout << "\nREST IN PEACE [*]\n\nWhile you were in a battle with " << remote_user.return_name() << ", you died.\n";	
+		cout << "\nREST IN PEACE [*]\n\nWhile you were in a battle with " << remote_user.return_name() << ", you died.\n";
 		any_to_exit(0, true);
 	}
 	if (remote_user.return_hp() > 0)
