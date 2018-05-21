@@ -1,99 +1,361 @@
-#include "monster.h"
 #include "player.h"
+#include "monster.h"
+#include <string>
+#include <Windows.h>
 #include <iostream>
+using namespace std;
 
-void monster::update_battle_hp(player& player)
+void player::update_battle_hp(monster& monster)
 {
-	hp_ -= player.return_dmg();
-	cout << "SYSTEM: Damage given by player to monster is: " << player.return_dmg() << "\n";
+	hp_ -= monster.return_dmg();
+	cout << "SYSTEM: Damage given by monster to player is: " << monster.return_dmg() << "\n";
 }
 
-void monster::set_dmg(player& pl)
+void player::death(monster& monster)
 {
-	const auto temp = rand() % ((pl.return_level() * 10) - (pl.return_level() - 1) * 10) + ((pl.return_level() - 1) * 10);
-	if (pl.return_death_count() >= 0 && pl.return_death_count() < 14)
-		dmg_ = temp*0.75;
-	if (pl.return_death_count() >= 14 && pl.return_death_count() < 20)
-		dmg_ = temp*0.66;
-	if (pl.return_death_count() >= 20 && pl.return_death_count() < 27)
-		dmg_ = temp*0.42;
-	if (pl.return_death_count() >= 27)
-		dmg_ = temp*0.30;
+	cout << "\nREST IN PEACE [*]\n\nWhile you were in a battle with " << monster.return_name() << ", you died.\n";
+	// add some kind of save system here // hi, I'm you from future. You were right.
 }
 
-void monster::set_max_hp(const int maxhp)
+void player::death(player& remote)
 {
-	max_hp_ = maxhp;
+	cout << "\nREST IN PEACE [*]\n\nWhile you were in a battle with " << remote.return_name() << ", you died.\n";
+	// add some kind of save system here // hi, I'm you from future. You were right.
 }
 
-int monster::return_max_hp() const
+void player::set_exp(const string& exp)
 {
-	return max_hp_;
+	exp_ = stoi(exp);
 }
 
-int monster::return_h_pregen() const
+void player::set_hp(const string& hp)
 {
-	return hpregen_;
+	hp_ = stoi(hp);
 }
 
-int monster::return_exp() const
+void player::set_boosts(const string& boosts)
+{
+	boosts_ = stoi(boosts);
+}
+
+void player::set_autohpitem(const string& autohpitem)
+{
+	auto_hp_item_ = stoi(autohpitem);
+}
+
+int player::return_exp() const
 {
 	return exp_;
 }
 
-void monster::seed(player& player, const string& name)
+int player::return_max_hp() const
 {
-	name_ = name;
-	hp_ = rand() % ((player.return_level() * 100) - (player.return_level()) * 90) + ((player.return_level()) * 90);
-	exp_ = player.return_level() * 100;
-	set_dmg(player);
-	set_max_hp(hp_);
+	return max_hp_;
 }
 
-void monster::set_pvpdmg(const int lvl)
+int player::return_level() const
 {
-	auto temp = rand() % ((lvl * 10) - (lvl - 1) * 10) + ((lvl - 1) * 10); // do some better algorithm here
+	return lvl_;
+}
+
+int player::return_boosts() const
+{
+	return boosts_;
+}
+
+int player::return_specitem() const
+{
+	return auto_hp_item_;
+}
+
+int player::return_death_count() const
+{
+	return death_count_;
+}
+
+int player::return_killing_spree() const
+{
+	return killing_spree_;
+}
+
+void player::set_death_count(const int deaths)
+{
+	death_count_ = deaths;
+}
+
+void player::set_char_name(const string& name)
+{
+	name_ = name;
+}
+
+void player::set_level(const string& level)
+{
+	lvl_ = stoi(level);
+}
+
+void player::set_max_hp(const string& maxhp)
+{
+	max_hp_ = stoi(maxhp);
+}
+
+void player::should_level_up(player& player)
+{
+	if (player.exp_ >= 200 && player.exp_ <= 350) {
+		lvl_ = 2;
+		player.max_hp_ = 120;
+	}
+	if (player.exp_ >= 351 && player.exp_ <= 750) {
+		lvl_ = 3;
+		player.max_hp_ = 140;
+	}
+	if (player.exp_ >= 751 && player.exp_ <= 1500) {
+		lvl_ = 4;
+		player.max_hp_ = 160;
+	}
+	if (player.exp_ >= 1501 && player.exp_ <= 4000) {
+		lvl_ = 5;
+		player.max_hp_ = 180;
+	}
+	if (player.exp_ >= 4001 && player.exp_ <= 9000) {
+		lvl_ = 6;
+		player.max_hp_ = 200;
+	}
+	if (player.exp_ >= 9001 && player.exp_ <= 20000) {
+		lvl_ = 7;
+		player.max_hp_ = 220;
+	}
+	if (player.exp_ >= 20001 && player.exp_ <= 50000) {
+		lvl_ = 8;
+		player.max_hp_ = 240;
+	}
+	if (player.exp_ >= 50001 && player.exp_ <= 120000) {
+		lvl_ = 9;
+		player.max_hp_ = 260;
+	}
+	if (player.exp_ >= 120001 && player.exp_ <= 250000) {
+		lvl_ = 10;
+		player.max_hp_ = 280;
+	}
+	if (player.exp_ >= 250001 && player.exp_ <= 1000000) {
+		lvl_ = 11;
+		player.max_hp_ = 300;
+	}
+	if (player.exp_ >= 1000001 && player.exp_ <= 10000000) {
+		lvl_ = 12;
+		player.max_hp_ = 320;
+	}
+}
+
+void player::set_specitem(const string& item)
+{
+	auto_hp_item_ = stoi(item);
+}
+
+bool player::return_auto_enabled() const
+{
+	return auto_hp_enabled_;
+}
+
+void player::set_auto_enabled(const bool state)
+{
+	auto_hp_enabled_ = state;
+}
+
+void player::set_gold(const int state)
+{
+	gold_ += state;
+}
+
+void player::market_gold(const int state)
+{
+	gold_ -= state;
+}
+
+void player::set_killing_spree(const int spree)
+{
+	killing_spree_ = spree;
+}
+
+
+void player::initiate_attack(player& player, monster& monster)
+{
+	const auto user_selection = rand() % 100 + 1;
+	const auto syst_selection = rand() % 100 + 1;
+	auto gold_amount = rand() % ((lvl_ * 10) - (lvl_ - 1) * 10) + ((lvl_ - 1) * 12);
+	if (player.return_killing_spree() >= 25)
+	{
+		gold_amount *= 5;
+	}
+	if (player.return_killing_spree() >= 10)
+	{
+		gold_amount *= 2;
+	}
+	else if (player.return_killing_spree() >= 5)
+	{
+		gold_amount *= 1.5;
+	}
+	player.set_dmg();
+	monster.set_dmg(player);
+	monster.update_battle_hp(player);
+	if (player.hp_ <= 0)
+	{
+		alive_ = false;
+		death(monster);
+	}
+	player.update_battle_hp(monster);
+	if (monster.return_hp() <= 0)
+	{
+		player.set_gold(gold_amount);
+		if (user_selection == syst_selection && return_specitem() == 0)
+		{
+			player.set_specitem("1");
+			cout << "You got an item: AUTO HP FILLER\n";
+			Sleep(1500);
+		}
+		monsters_killed_++;
+		player.set_killing_spree(player.return_killing_spree() + 1);
+	}
+}
+
+void player::update_battle_hp(player& player)
+{
+	hp_ -= player.return_dmg();
+	cout << "SYSTEM: Damage given by remote user to you is: " << player.return_dmg() << "\n";
+}
+
+void player::set_dmg(player& pl)
+{
+	const auto temp = rand() % ((pl.return_level() * 10) - (pl.return_level() - 1) * 10) + ((pl.return_level() - 1) * 10);
+	if (pl.return_death_count() >= 0 && pl.return_death_count() < 14)
+		dmg_ = temp * 0.95;
+	if (pl.return_death_count() >= 14 && pl.return_death_count() < 20)
+		dmg_ = temp * 0.90;
+	if (pl.return_death_count() >= 20 && pl.return_death_count() < 27)
+		dmg_ = temp * 0.85;
+	if (pl.return_death_count() >= 27)
+		dmg_ = temp * 0.80;
+}
+
+void player::initiate_attack(player& local, player& remote)
+{
+	const auto user_selection = rand() % 100 + 1;
+	const auto syst_selection = rand() % 100 + 1;
+	local.set_dmg();
+	remote.set_dmg(local);
+	remote.update_battle_hp(local);
+	if (local.hp_ <= 0)
+	{
+		alive_ = false;
+		death(remote);
+	}
+	local.update_battle_hp(remote);
+	if (remote.return_hp() <= 0)
+	{
+		if (user_selection == syst_selection && return_specitem() == 0)
+		{
+			local.set_specitem("1");
+			cout << "You got an item: AUTO HP FILLER\n";
+			Sleep(1500);
+		}
+		//monsters_killed_++; replace this with remote users killed
+	}
+}
+
+void player::update_player_exp(monster& monster)
+{
+	exp_ += monster.return_exp();
+}
+
+void player::set_dmg()
+{
+	auto temp = rand() % ((lvl_ * 10) - (lvl_ - 1) * 10) + ((lvl_ - 1) * 12); // do some better algorithm here
 	if (temp == 0)
 		temp = 1;
 	dmg_ = temp;
+	if (return_killing_spree() >= 10)
+	{
+		dmg_ = temp * 0.80;
+		return;
+	}
+	if (return_killing_spree() >= 5)
+	{
+		dmg_ = temp * 0.90;
+	}
 }
 
-void monster::pvpseed(player& player, const string& name, const int hp, const int lvl)
-{
-	name_ = name;
-	exp_ = player.return_level() * 100;
-	set_pvpdmg(lvl);
-	set_max_hp(hp);
-}
-
-void monster::information() const
-{
-	cout << "Points          : " << hp_ << "/100\n";
-	cout << "Total dmg       : " << dmg_ << "\n";
-	cout << "-------------------------\n";
-}
-
-int monster::return_hp() const
-{
-	return hp_;
-}
-
-int monster::return_dmg() const
+int player::return_dmg() const
 {
 	return dmg_;
 }
 
-string monster::return_name() const
+string player::return_name() const
 {
 	return name_;
 }
 
-void monster::heal(const int update)
+int player::return_gold() const
 {
-	if (hp_ >= 100)
+	return gold_;
+}
+
+int player::return_h_pregen() const
+{
+	return hpregen_;
+}
+
+void player::information() const
+{
+	cout << "Health points   : " << hp_ << "/" << max_hp_ << "\n";
+	cout << "Gold            : " << gold_ << "\n";
+	cout << "Remaining boosts: " << boosts_ << "\n";
+	cout << "Current exp     : " << exp_ << "\n";
+	cout << "Current level   : " << lvl_ << "\n"; // in the next version also show how much more left, you still didn't do it
+	cout << "Monsters killed : " << monsters_killed_ << "\n";
+	cout << "Times you died  : " << death_count_ << "\n";
+	cout << "Killing spree   : " << killing_spree_;
+	if (return_killing_spree() >= 25)
+		cout << " (x5 gold activated!)\n";
+	else if (return_killing_spree() >= 10)
+		cout << " (x2 gold activated!)\n";
+	else if (return_killing_spree() >= 5)
+		cout << " (x1.5 gold activated!)\n";
+	else
+		cout << "\n";
+		cout << "-------------------------\n"; // for the next level
+}
+
+void player::set_monsters_killed(const int monsters)
+{
+	monsters_killed_ = monsters;
+}
+
+int player::return_monsters_killed() const
+{
+	return monsters_killed_;
+}
+
+void player::heal_boost()
+{
+	if (boosts_ <= 0)
 	{
-		hp_ = 100;
+		boosts_ = 0;
 		return;
 	}
-	hp_ += update;
+	hp_ += 50;
+	boosts_ -= 1;
+}
+
+int player::return_hp() const
+{
+	return hp_;
+}
+
+void player::heal(const int update)
+{
+	if (hp_ >= max_hp_)
+	{
+		hp_ = max_hp_;
+		return;
+	}
+	hp_ += (update*lvl_ / 2);
 }
