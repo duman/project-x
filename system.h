@@ -17,7 +17,7 @@ public:
 inline string xor_encrypt_decrypt_spec(string to_encrypt, const char key) {
 	auto output = to_encrypt;
     
-    for (auto i = 0; i < to_encrypt.size(); i++)
+    for (auto i = 0; i < static_cast<int>(to_encrypt.size()); i++)
         output[i] = to_encrypt[i] ^ key;
 
     return output;
