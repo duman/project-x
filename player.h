@@ -13,6 +13,7 @@ class player
 	int hpregen_ = 2; //hpregen
 	int hp_; //hp
 	int boosts_ = 5; //hppot
+	int gold_;
 	int dmg_;
 	int lvl_ = 1;
 	int exp_ = 0;
@@ -20,13 +21,14 @@ class player
 	int monsters_killed_ = 0;
 	int max_hp_;
 	int death_count_;
-	// int killing_spree_; not used yet, will be added in the future
+	int killing_spree_;
 public:
-	player(const int a, const int b, const string& nm): dmg_(0), death_count_(0)
+	player(const int a, const int b, const string& nm, const int g): dmg_(0), death_count_(0), killing_spree_(0)
 	{
 		hp_ = a;
 		max_hp_ = b;
 		name_ = nm;
+		gold_ = g;
 	}
 
 	void heal(int);
@@ -45,6 +47,8 @@ public:
 	int return_death_count() const;
 	bool return_auto_enabled() const;
 	string return_name() const;
+	int return_gold() const;
+	int return_killing_spree() const;
 	void set_death_count(int);
 	void initiate_attack(player&, monster&);
 	void update_battle_hp(player& player);
@@ -65,5 +69,8 @@ public:
 	void set_monsters_killed(int);
 	void set_max_hp(const string&);
 	void set_auto_enabled(bool);
+	void set_gold(int);
+	void set_killing_spree(int);
+	void market_gold(int);
 };
 #endif
