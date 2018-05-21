@@ -73,6 +73,11 @@ int player::return_death_count() const
 	return death_count_;
 }
 
+int player::return_killing_spree() const
+{
+	return killing_spree_;
+}
+
 void player::set_death_count(const int deaths)
 {
 	death_count_ = deaths;
@@ -156,10 +161,39 @@ void player::set_auto_enabled(const bool state)
 	auto_hp_enabled_ = state;
 }
 
+void player::set_gold(const int state)
+{
+	gold_ += state;
+}
+
+void player::market_gold(const int state)
+{
+	gold_ -= state;
+}
+
+void player::set_killing_spree(const int spree)
+{
+	killing_spree_ = spree;
+}
+
+
 void player::initiate_attack(player& player, monster& monster)
 {
 	const auto user_selection = rand() % 100 + 1;
 	const auto syst_selection = rand() % 100 + 1;
+	auto gold_amount = rand() % ((lvl_ * 10) - (lvl_ - 1) * 10) + ((lvl_ - 1) * 12);
+	if (player.return_killing_spree() >= 25)
+	{
+		gold_amount *= 5;
+	}
+	if (player.return_killing_spree() >= 10)
+	{
+		gold_amount *= 2;
+	}
+	else if (player.return_killing_spree() >= 5)
+	{
+		gold_amount *= 1.5;
+	}
 	player.set_dmg();
 	monster.set_dmg(player);
 	monster.update_battle_hp(player);
@@ -171,6 +205,7 @@ void player::initiate_attack(player& player, monster& monster)
 	player.update_battle_hp(monster);
 	if (monster.return_hp() <= 0)
 	{
+		player.set_gold(gold_amount);
 		if (user_selection == syst_selection && return_specitem() == 0)
 		{
 			player.set_specitem("1");
@@ -178,6 +213,7 @@ void player::initiate_attack(player& player, monster& monster)
 			Sleep(1500);
 		}
 		monsters_killed_++;
+		player.set_killing_spree(player.return_killing_spree() + 1);
 	}
 }
 
@@ -191,13 +227,13 @@ void player::set_dmg(player& pl)
 {
 	const auto temp = rand() % ((pl.return_level() * 10) - (pl.return_level() - 1) * 10) + ((pl.return_level() - 1) * 10);
 	if (pl.return_death_count() >= 0 && pl.return_death_count() < 14)
-		dmg_ = temp*0.95;
+		dmg_ = temp * 0.95;
 	if (pl.return_death_count() >= 14 && pl.return_death_count() < 20)
-		dmg_ = temp*0.90;
+		dmg_ = temp * 0.90;
 	if (pl.return_death_count() >= 20 && pl.return_death_count() < 27)
-		dmg_ = temp*0.85;
+		dmg_ = temp * 0.85;
 	if (pl.return_death_count() >= 27)
-		dmg_ = temp*0.80;
+		dmg_ = temp * 0.80;
 }
 
 void player::initiate_attack(player& local, player& remote)
@@ -232,10 +268,19 @@ void player::update_player_exp(monster& monster)
 
 void player::set_dmg()
 {
-	auto temp = rand() % ((lvl_ * 10) - (lvl_ - 1) * 10) + ((lvl_ - 1) * 10); // do some better algorithm here
+	auto temp = rand() % ((lvl_ * 10) - (lvl_ - 1) * 10) + ((lvl_ - 1) * 12); // do some better algorithm here
 	if (temp == 0)
 		temp = 1;
 	dmg_ = temp;
+	if (return_killing_spree() >= 10)
+	{
+		dmg_ = temp * 0.80;
+		return;
+	}
+	if (return_killing_spree() >= 5)
+	{
+		dmg_ = temp * 0.90;
+	}
 }
 
 int player::return_dmg() const
@@ -248,6 +293,11 @@ string player::return_name() const
 	return name_;
 }
 
+int player::return_gold() const
+{
+	return gold_;
+}
+
 int player::return_h_pregen() const
 {
 	return hpregen_;
@@ -256,14 +306,22 @@ int player::return_h_pregen() const
 void player::information() const
 {
 	cout << "Health points   : " << hp_ << "/" << max_hp_ << "\n";
+	cout << "Gold            : " << gold_ << "\n";
 	cout << "Remaining boosts: " << boosts_ << "\n";
 	cout << "Current exp     : " << exp_ << "\n";
 	cout << "Current level   : " << lvl_ << "\n"; // in the next version also show how much more left, you still didn't do it
 	cout << "Monsters killed : " << monsters_killed_ << "\n";
 	cout << "Times you died  : " << death_count_ << "\n";
-	//cout << "Killing spree   : " << killing_spree_ << "\n"; //add a dynamic system for this. as the spree goes higher make rewards
-	// better and also make monsters harder, but increase it little by little don't go full nuts on it. okay? you hear me? thanks.
-	cout << "-------------------------\n"; // for the next level
+	cout << "Killing spree   : " << killing_spree_;
+	if (return_killing_spree() >= 25)
+		cout << " (x5 gold activated!)\n";
+	else if (return_killing_spree() >= 10)
+		cout << " (x2 gold activated!)\n";
+	else if (return_killing_spree() >= 5)
+		cout << " (x1.5 gold activated!)\n";
+	else
+		cout << "\n";
+		cout << "-------------------------\n"; // for the next level
 }
 
 void player::set_monsters_killed(const int monsters)
@@ -299,5 +357,5 @@ void player::heal(const int update)
 		hp_ = max_hp_;
 		return;
 	}
-	hp_ += (update*lvl_/2);
+	hp_ += (update*lvl_ / 2);
 }
